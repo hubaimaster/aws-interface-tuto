@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+  <meta charset="UTF-8">
+  <title>Indie link | Make the address short</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #2A2E37;
+    }
+
+    .search {
+      width: 210px;
+      height: 100px;
+      margin: 40px auto 0;
+      background-color: #242628;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.5s ease;
+    }
+    .search:before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 100%;
+      position: relative;
+      background-color: #00FEDE;
+      transition: all 0.5s ease;
+    }
+    .search {
+      width: 80%;
+    }
+    .search:before {
+      height: 60px;
+      margin: 20px 20px 20px 30px;
+      position: absolute;
+    }
+
+    .search-box {
+      width: 95%;
+      height: 100%;
+      box-shadow: none;
+      border: none;
+      background: transparent;
+      color: #fff;
+      padding: 20px 100px 20px 45px;
+      font-size: 40px;
+    }
+    .search-box:focus {
+      outline: none;
+    }
+
+    .search-button {
+      width: 130px;
+      height: 100px;
+      display: block;
+      position: absolute;
+      right: 0;
+      top: -5px;
+      padding: 20px;
+      cursor: pointer;
+    }
+
+    .search-button > h1 {
+      color: white;
+    }
+
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prefixfree/1.0.7/prefixfree.min.js"></script>
+
+</head>
+
+<body>
+<div class="search">
+  <input id="target-address" type="search" class="search-box" placeHolder="https://www.target-address.com"/>
+  <span class="search-button">
+      <h1>Briefly</h1>
+    </span>
+</div>
+
+<br>
+<div id="result-box" align="center" style="color:white;" hidden>
+  <h3><span>Your address is</span></h3>
+  <h1><a id="short-address" href="" style="color:#00FEDE">https://short.com/</a></h1>
+</div>
+
+<div align="center">
+  <h2 style="color:white">Powerd by <a style="color:white" href="https://aws-interface.com">AWSInteface</a></h2>
+</div>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+<script src='aws_interface.js'></script>
+
+<script>
+
+  var query = window.location.search.substring(1);
+  var qs = parse_query_string(query);
+
+  const awsi = new Client();
+  awsi.auth_guest(null, function(resp){
+    console.log(resp['guest_id']); // Logging guest_id
+    if ('id' in qs){
+      navigateTo(qs.id);
+    }
+
+  });
+
+
+  $('.search-button').click(function(){
+    const targetAddress = $('#target-address').val();
+    if (targetAddress != null && targetAddress.length > 0){
+      if (targetAddress.startsWith('http')){
+        createShortAddress(targetAddress, function (resp) {
+          const item_id = resp['item_id'];
+          getShortId(item_id, function (short_id) {
+            const url = getShortUrl(short_id);
+            $('#short-address').html(url);
+            $('#short-address').attr('href', url);
+            $('#result-box').show(1000, 'linear');
+          });
+        });
+      }else{
+        alert("Please enter valid http(s) protocol address");
+      }
+    }else{
+      alert("Please enter the target-address");
+    }
+  });
+
+  function getShortUrl(short_id) {
+    const baseurl = window.location.origin + window.location.pathname;
+    const short_url = baseurl + '?id=' + short_id;
+    return short_url;
+  }
+
+  function makeid(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  }
+
+  function createShortAddress(targetAddress, callback){
+    const short_id = makeid(8);
+    awsi.database_create_item({
+      'target_address': targetAddress,
+      'short_id': short_id,
+    }, 'address', ['owner'], ['owner'], callback);
+  }
+
+  function getShortId(item_id, callback) {
+    awsi.database_get_item(item_id, function (resp) {
+      const short_id = resp['item']['short_id'];
+      callback(short_id);
+    });
+  }
+
+  // To get parameter from url for older browser like I.E
+  function parse_query_string(query) {
+    var vars = query.split("&");
+    var query_string = {};
+    for (var i = 0; i < vars.length; i++) {
+      var pair = vars[i].split("=");
+      var key = decodeURIComponent(pair[0]);
+      var value = decodeURIComponent(pair[1]);
+      // If first entry with this name
+      if (typeof query_string[key] === "undefined") {
+        query_string[key] = decodeURIComponent(value);
+        // If second entry with this name
+      } else if (typeof query_string[key] === "string") {
+        var arr = [query_string[key], decodeURIComponent(value)];
+        query_string[key] = arr;
+        // If third or later entry with this name
+      } else {
+        query_string[key].push(decodeURIComponent(value));
+      }
+    }
+    return query_string;
+  }
+
+  function navigateTo(short_id) {
+    awsi.database_query_items('address', [{'option': 'or', 'field': 'short_id', 'value': short_id, 'condition': 'eq'}],
+            null, 100, false, function (resp) {
+              const items = resp['items'];
+              console.log(resp);
+              const target_address = items[0]['target_address'];
+              window.location = target_address;
+            });
+  }
+
+
+</script>
+</body>
+</html>
