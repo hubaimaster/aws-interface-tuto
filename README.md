@@ -19,27 +19,8 @@ aws-interface-tuto
 └───java
 └───swift
 └───nodejs
-
+└───another_languages...
 ```
-
-.
-+-- README.md
-+-- webjs
-|   +-- [contributer's_folder]
-|   |   +-- README.md
-|   |   +-- ... Any files
-|   +-- [contributer2's_folder]
-+-- python3
-|   +--  [contributer3's_folder]
-|   +--  [contributer4's_folder]
-+-- java
-|   +--  [contributer5's_folder]
-|   +--  [contributer6's_folder]
-+-- nodejs
-|   +--  [contributer7's_folder]
-|   +--  [contributer8's_folder]
-+-- swift
-|   +--  [contributerN's_folder]
 
 # Editing
 
