@@ -8,6 +8,7 @@ AWSI Tutorial is licensed under a [*Apache 2.0*](http://www.apache.org/licenses/
 
 The contributor must follow the directory structure below:
 
+.
 +-- README.md
 +-- webjs
 |   +-- [contributer's_folder]
