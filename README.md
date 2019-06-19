@@ -8,6 +8,20 @@ AWSI Tutorial is licensed under a [*Apache 2.0*](http://www.apache.org/licenses/
 
 The contributor must follow the directory structure below:
 
+```
+aws-interface-tuto
+│   README.md
+└───webjs
+│   └───contributer's_folder
+│       │   README.md
+│       │   ...
+└───python3
+└───java
+└───swift
+└───nodejs
+
+```
+
 .
 +-- README.md
 +-- webjs
