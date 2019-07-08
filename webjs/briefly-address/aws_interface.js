@@ -3,15 +3,15 @@ class Client{
 
     constructor() {
         this.set_session_id(null);
-        this.set_base_url('https://ywrja3de0j.execute-api.ap-northeast-2.amazonaws.com/prod_aws_interface/iYKCogjSnKtzYXCphK4oxE');
+        this.setBaseUrl('https://t8ddet8cl8.execute-api.ap-northeast-2.amazonaws.com/prod_aws_interface/Gfd8xNbvQz4vYJCRYKNXxA');
     }
 
-    get_base_url(){
-        return this.base_url;
+    getBaseUrl(){
+        return this.baseUrl;
     }
 
-    set_base_url(base_url){
-        this.base_url = base_url;
+    setBaseUrl(baseUrl){
+        this.baseUrl = baseUrl;
     }
 
     get_session_id(){
@@ -22,20 +22,29 @@ class Client{
         this.session_id = session_id;
     }
 
-    static _get(object, key, default_value=null) {
+    static _get(object, key, defaultValue=null) {
         var result = object[key];
-        return (typeof result !== "undefined") ? result : default_value;
+        return (typeof result !== "undefined") ? result : defaultValue;
     }
 
-    _call_api(service_type, function_name, data, callback) {
+    callAPI(module_name, data) {
+        self = this;
         if (data == null){
             data = {};
         }
-        data['module_name'] = 'cloud.' + service_type + '.' + function_name;
+        data['module_name'] = module_name;
         if (this.get_session_id() != null){
             data['session_id'] = this.get_session_id();
         }
-        this._post(this.get_base_url(), data, callback);
+        return new Promise(function (resolve, reject) {
+            self._post(self.getBaseUrl(), data, function (body) {
+                if ("error" in body){
+                    reject(new Error(body["error"]));
+                }else{
+                    resolve(body);
+                }
+            });
+        });
     }
 
     _post(url, data, callback){
@@ -62,181 +71,179 @@ class Client{
         req.send(JSON.stringify(data));
     }
 
-    _auth(api_name, data, callback) {
-        let self = this;
-        this._call_api('auth', api_name, data, function (data) {
-            self.log_create_log('auth', api_name, null, function (data) {
-
-            });
-            callback(data);
-        });
+    _auth(api_name, data) {
+        return this.callAPI('cloud.auth.' + api_name, data);
     }
 
-    _database(api_name, data, callback) {
-        let self = this;
-        this._call_api('database', api_name, data, function (data) {
-            self.log_create_log('database', api_name, null, function (data) {
-
-            });
-            callback(data);
-        });
+    _database(api_name, data) {
+        return this.callAPI('cloud.database.' + api_name, data);
     }
 
-    _storage(api_name, data, callback) {
-        let self = this;
-        this._call_api('storage', api_name, data, function (data) {
-            self.log_create_log('storage', api_name, null, function (data) {
-
-            });
-            callback(data);
-        });
+    _storage(api_name, data) {
+        return this.callAPI('cloud.storage.' + api_name, data);
     }
 
-    _logic(api_name, data, callback) {
-        this._call_api('logic', api_name, data, callback);
+    _logic(api_name, data) {
+        return this.callAPI('cloud.logic.' + api_name, data);
     }
 
-    _log(api_name, data, callback) {
-        this._call_api('log', api_name, data, callback);
+    _log(api_name, data) {
+        return this.callAPI('cloud.log.' + api_name, data);
     }
 
-    auth_register(email, password, extra={}, callback) {
-        this._auth('register', {
+    authRegister(email, password, extra) {
+        return this._auth('register', {
             'email': email,
             'password': password,
             'extra': extra,
-        }, callback);
-    }
-
-    auth_login(email, password, callback) {
-        let self = this;
-        this._auth('login', {
-            'email': email,
-            'password': password,
-        }, function (data) {
-            if ('session_id' in data){
-                self.set_session_id(Client._get(data,'session_id'));
-            }
-            callback(data);
         });
     }
 
-    auth_get_user(user_id, callback) {
-        this._auth('get_user', {
+    authLogin(email, password) {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            this._auth('login', {
+                'email': email,
+                'password': password,
+            }).then(function (body) {
+                self.set_session_id(Client._get(body,'session_id'));
+                resolve(body);
+            }).catch(reject);
+        });
+    }
+
+    authLoginFacebook(access_token) {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            this._auth('login_facebook', {
+                'access_token': access_token,
+            }).then(function (body) {
+                self.set_session_id(Client._get(body,'session_id'));
+                resolve(body);
+            }).catch(reject);
+        });
+    }
+
+    authGetUser(user_id) {
+        return this._auth('get_user', {
             'user_id': user_id,
-        }, callback);
-    }
-
-    auth_get_users(start_key=null, callback) {
-        this._auth('get_users', {
-            'start_key': start_key,
-        }, callback);
-    }
-
-    auth_logout(callback) {
-        this._auth('logout', {
-            'session_id': this.get_session_id(),
-        }, callback);
-    }
-
-    auth_guest(guest_id=null, callback) {
-        let self = this;
-        this._auth('guest', {
-            'guest_id': guest_id,
-        }, function (data) {
-            self.set_session_id(Client._get(data,'session_id'));
-            callback(data);
         });
     }
 
-    database_create_item(item, partition, read_groups, write_groups, callback) {
-        this._database('create_item', {
+    authGetUsers(start_key=null) {
+        return this._auth('get_users', {
+            'start_key': start_key,
+        });
+    }
+
+    authLogout() {
+        return this._auth('logout', {
+            'session_id': this.get_session_id(),
+        });
+    }
+
+    authGuest(guest_id=null) {
+        let self = this;
+        return new Promise((resolve, reject) => {
+            this._auth('guest', {
+                'guest_id': guest_id,
+            }).then(function (body) {
+                self.set_session_id(Client._get(body,'session_id'));
+                resolve(body);
+            }).catch(reject);
+        });
+    }
+
+    databaseCreateItem(partition, item) {
+        return this._database('create_item', {
             'item': item,
             'partition': partition,
-            'read_groups': read_groups,
-            'write_groups': write_groups,
-        }, callback);
+        });
     }
 
-    database_delete_item(item_id, callback) {
-        this._database('delete_item', {
+    databaseDeleteItem(item_id) {
+        return this._database('delete_item', {
             'item_id': item_id,
-        }, callback);
+        });
     }
 
-    database_get_item(item_id, callback) {
-        this._database('get_item', {
+    databaseGetItem(item_id) {
+        return this._database('get_item', {
             'item_id': item_id,
-        }, callback);
+        });
     }
 
-    database_get_items(partition, start_key=null, limit=100, callback) {
-        this._database('get_items', {
+    databaseGetItemCount(partition, field=null, value=null) {
+        return this._database('get_item_count', {
+            'partition': partition,
+            'field': field,
+            'value': value,
+        });
+    }
+
+    databaseGetItems(partition, start_key=null, limit=100) {
+        return this._database('get_items', {
             'partition': partition,
             'start_key': start_key,
             'limit': limit,
-        }, callback);
+        });
     }
 
-    database_put_item_field(item_id, field_name, field_value, callback) {
-        this._database('put_item_field', {
+    databasePutItemField(item_id, field_name, field_value) {
+        return this._database('put_item_field', {
             'item_id': item_id,
             'field_name': field_name,
             'field_value': field_value,
-        }, callback);
+        });
     }
 
-    database_update_item(item_id, item, read_groups, write_groups, callback) {
-        this._database('update_item', {
+    databaseUpdateItem(item_id, item) {
+        return this._database('update_item', {
             'item_id': item_id,
             'item': item,
-            'read_groups': read_groups,
-            'write_groups': write_groups,
-        }, callback);
+        });
     }
 
-    database_query_items(partition, query, start_key=null, limit=100, reverse=false, callback) {
-        this._database('query_items', {
+    databaseQueryItems(partition, query, start_key=null, limit=100, reverse=false) {
+        return this._database('query_items', {
             'partition': partition,
             'query': query,
             'start_key': start_key,
             'limit': limit,
             'reverse': reverse,
-        }, callback);
+        });
     }
 
-    storage_delete_b64(file_id, callback) {
-        this._storage('delete_b64', {
+    storageDeleteB64(file_id) {
+        return this._storage('delete_b64', {
             'file_id': file_id,
-        }, callback);
+        });
     }
 
-    storage_download_b64_chunk(file_id, callback) {
-        this._storage('download_b64', {
+    storageDownloadB64Chunk(file_id) {
+        return this._storage('download_b64', {
             'file_id': file_id,
-        }, callback);
+        });
     }
 
-    storage_upload_b64_chunk(parent_file_id, file_name, file_b64, read_groups, write_groups, callback) {
-        this._storage('upload_b64', {
+    storageUploadB64Chunk(parent_file_id, file_name, file_b64) {
+        return this._storage('upload_b64', {
             'parent_file_id': parent_file_id,
             'file_name': file_name,
             'file_b64': file_b64,
-            'read_groups': read_groups,
-            'write_groups': write_groups,
-        }, callback);
+        });
     }
 
-    storage_delete_file(file_id, callback) {
-        this.storage_delete_b64(file_id, callback);
+    storageDeleteFile(file_id) {
+        return this.storageDeleteB64(file_id);
     }
 
-    storage_download_file(file_id, callback_file) {
+    storageDownloadFile(file_id) {
         let self = this;
         var string_file_b64 = null;
         var file_name = 'file';
         function download(file_id, callback){
-            self.storage_download_b64_chunk(file_id, function (result) {
+            self.storageDownloadB64Chunk(file_id).then(function (result) {
                 file_id = Client._get(result, 'parent_file_id', null);
                 file_name = Client._get(result,'file_name', file_name);
                 if (string_file_b64 != null){
@@ -251,18 +258,21 @@ class Client{
                 }
             });
         }
-        download(file_id, function (string_file_b64, result) {
-            if (string_file_b64 == null){
-                callback_file(null);
-                console.error(result);
-            }else{
-                let file_bin = Buffer.from(string_file_b64, 'base64');
-                callback_file(file_bin);
-            }
+        return new Promise((resolve, reject) => {
+            download(file_id, function (string_file_b64, result) {
+                if (string_file_b64 == null){
+                    callback_file(null);
+                    console.error(result);
+                    reject(new Error(result))
+                }else{
+                    let file_bin = Buffer.from(string_file_b64, 'base64');
+                    resolve(file_bin);
+                }
+            });
         });
     }
 
-    storage_upload_file(bin, read_groups, write_groups, callback) {
+    storageUploadFile(bin) {
         let self = this;
         function *div_chunks(text, n){
             for (var i = 0; i < text.length; i+= n){
@@ -277,7 +287,7 @@ class Client{
         let file_name = "file";
         function upload(parent_file_id, base64_chunk, callback){
             base64_chunk = base64_chunk.toString();
-            self.storage_upload_b64_chunk(parent_file_id, file_name, base64_chunk, read_groups, write_groups, function (data) {
+            self.storageUploadB64Chunk(parent_file_id, file_name, base64_chunk).then(function (data) {
                 var parent_file_id = data['file_id'];
                 var next_base64_chunk = base64_chunks.next();
                 if (next_base64_chunk.done){
@@ -287,22 +297,36 @@ class Client{
                 }
             });
         }
-        upload(parent_file_id, base64_chunks.next().value, callback);
+        return new Promise((resolve) => {
+            upload(parent_file_id, base64_chunks.next().value, function (data) {
+                resolve(data);
+            });
+        });
     }
 
-    log_create_log(event_source, event_name, event_param, callback) {
-        this._log('create_log', {
+    logCreateLog(event_source, event_name, event_param) {
+        return this._log('create_log', {
             'event_source': event_source,
             'event_name': event_name,
             'event_param': event_param,
-        }, callback);
+        });
     }
 
-    logic_run_function(function_name, payload, callback){
-        this._logic('logic', {
+    logGetLogs(event_source, event_name, log_owner, start_key, reverse){
+        return this._log('create_log', {
+            "event_name": event_name,
+            "event_source": event_source,
+            "reverse": reverse,
+            "start_key": start_key,
+            "user_id": log_owner
+        });
+    }
+
+    logicRunFunction(function_name, payload){
+        return this._logic('run_function', {
             'function_name': function_name,
             'payload': payload,
-        }, callback);
+        });
     }
 
 }

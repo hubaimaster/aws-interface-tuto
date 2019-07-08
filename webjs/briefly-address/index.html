@@ -104,12 +104,11 @@
   var qs = parse_query_string(query);
 
   const awsi = new Client();
-  awsi.auth_guest(null, function(resp){
+  awsi.authGuest(null).then(function(resp){
     console.log(resp['guest_id']); // Logging guest_id
     if ('id' in qs){
       navigateTo(qs.id);
     }
-
   });
 
 
@@ -152,14 +151,14 @@
 
   function createShortAddress(targetAddress, callback){
     const short_id = makeid(8);
-    awsi.database_create_item({
+    awsi.databaseCreateItem('address', {
       'target_address': targetAddress,
       'short_id': short_id,
-    }, 'address', ['owner'], ['owner'], callback);
+    }).then(callback);
   }
 
   function getShortId(item_id, callback) {
-    awsi.database_get_item(item_id, function (resp) {
+    awsi.databaseGetItem(item_id).then(function (resp) {
       const short_id = resp['item']['short_id'];
       callback(short_id);
     });
@@ -189,8 +188,8 @@
   }
 
   function navigateTo(short_id) {
-    awsi.database_query_items('address', [{'option': 'or', 'field': 'short_id', 'value': short_id, 'condition': 'eq'}],
-            null, 100, false, function (resp) {
+    awsi.databaseQueryItems('address', [{'option': 'or', 'field': 'short_id', 'value': short_id, 'condition': 'eq'}],
+            null, 100, false).then(function (resp) {
               const items = resp['items'];
               console.log(resp);
               const target_address = items[0]['target_address'];
